@@ -113,10 +113,15 @@ def load_keys():
         return []
     return [k.strip() for k in open(APPROVED_KEYS_FILE).readlines() if k.strip()]
 
+def save_keys(keys):
+    with open(APPROVED_KEYS_FILE, "w") as f:
+        for k in keys:
+            f.write(k + "\n")
+
 def is_approved(key):
     return key in load_keys()
 
-# ================= SUBDOMAIN ================= #
+# ================= HOST FINDER ================= #
 
 def sanitize(d):
     d = d.strip().lower()
@@ -145,13 +150,10 @@ def fetch_hosts(domain):
                 subs.add(s)
     return subs
 
-# ================= REAL-TIME RESPONSE CHECK ================= #
-
 def realtime_check(host, idx, total):
-    url = f"http://{host}"
     start = time.time()
     try:
-        r = requests.get(url, timeout=TIMEOUT, allow_redirects=False)
+        r = requests.get(f"http://{host}", timeout=TIMEOUT, allow_redirects=False)
         latency = int((time.time() - start) * 1000)
         code = r.status_code
 
@@ -162,19 +164,53 @@ def realtime_check(host, idx, total):
         else:
             status = Fore.YELLOW + "UNKNOWN ⚠️"
 
-        print(
-            f"[{idx}/{total}] {host:<32} "
-            f"{code:<4} {status}  {latency} ms"
-        )
+        print(f"[{idx}/{total}] {host:<32} {code} {status} {latency}ms")
 
-    except Exception:
+    except:
         latency = int((time.time() - start) * 1000)
-        print(
-            f"[{idx}/{total}] {host:<32} "
-            f"{Fore.RED}NO RESP ❌  {latency} ms"
-        )
+        print(f"[{idx}/{total}] {host:<32} NO-RESP ❌ {latency}ms")
 
-    time.sleep(0.15)  # 👈 real-time feel
+    time.sleep(0.15)
+
+# ================= ADMIN PANEL ================= #
+
+def admin_panel():
+    slow("\n🔐 ADMIN PANEL\n", Fore.YELLOW)
+    pwd = input("Admin Password: ").strip()
+    if pwd != ADMIN_PASSWORD:
+        slow("❌ Access Denied\n", Fore.RED)
+        return
+
+    while True:
+        print("\n[1] Approve Key")
+        print("[2] View Approved Keys")
+        print("[3] Revoke Key")
+        print("[0] Exit Admin Panel")
+
+        ch = input("Select: ").strip()
+        keys = load_keys()
+
+        if ch == "1":
+            k = input("Enter key to approve: ").strip()
+            if k and k not in keys:
+                keys.append(k)
+                save_keys(keys)
+                slow("✅ Key Approved", Fore.GREEN)
+
+        elif ch == "2":
+            slow("\nApproved Keys:\n", Fore.CYAN)
+            for i, k in enumerate(keys, 1):
+                print(f"[{i}] {k}")
+
+        elif ch == "3":
+            k = input("Enter key to revoke: ").strip()
+            if k in keys:
+                keys.remove(k)
+                save_keys(keys)
+                slow("❌ Key Revoked", Fore.RED)
+
+        elif ch == "0":
+            break
 
 # ================= MAIN ================= #
 
@@ -186,8 +222,9 @@ def main():
 
     secret = input("Enter command or press ENTER: ").strip()
     if secret == ADMIN_SECRET_CODE:
-    admin_panel()
-    return
+        admin_panel()
+        return
+
     if not is_approved(device_key):
         slow("❌ Device not approved\n", Fore.RED)
         slow("Your Device Key:\n", Fore.YELLOW)
