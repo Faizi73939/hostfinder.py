@@ -186,9 +186,8 @@ def main():
 
     secret = input("Enter command or press ENTER: ").strip()
     if secret == ADMIN_SECRET_CODE:
-        print(Fore.YELLOW + "Admin panel locked in this build.")
-        return
-
+    admin_panel()
+    return
     if not is_approved(device_key):
         slow("❌ Device not approved\n", Fore.RED)
         slow("Your Device Key:\n", Fore.YELLOW)
